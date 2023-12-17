@@ -94,7 +94,6 @@ fn convert(formatted: Vec<RegexSymbol>) -> Result<VecDeque<RegexSymbol>, String>
         if let RegexSymbol::Char('(') = symbol {
             operator_stack.push(symbol)
         }
-
         else if let RegexSymbol::Char(')') = symbol {
             // If the stack runs out without finding a left parenthesis, then there are mismatched parentheses.
             let mut found_corresponding_bracket = false;
@@ -115,7 +114,6 @@ fn convert(formatted: Vec<RegexSymbol>) -> Result<VecDeque<RegexSymbol>, String>
             // Pop the corresponding parenthesis we just encountered off the stack
             operator_stack.pop().unwrap();
         }
-
         else if RegexSymbol::get_type(&symbol) != OperatorType::None {
             if RegexSymbol::get_type(&symbol) == OperatorType::Binary { 
                 // All binary operators are left associative in RegEx, so <= is used to respect the grouping.
@@ -130,7 +128,6 @@ fn convert(formatted: Vec<RegexSymbol>) -> Result<VecDeque<RegexSymbol>, String>
             // Don't bother popping unary ops, they're all of the same precedence and always follows the operand.
             operator_stack.push(symbol);
         }
-        
         else {
             output_queue.push_back(symbol);
         }
