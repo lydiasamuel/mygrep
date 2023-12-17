@@ -1,3 +1,5 @@
+use mygrep::postfixer;
+
 fn main() {
-    println!("Hello, world!");
+    postfixer::transform("a?a?a?aaa".to_string());
 }
