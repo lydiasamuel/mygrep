@@ -16,6 +16,8 @@ pub enum RegexSymbol {
     Star,
     Concat,
     Alternation,
+    Open,
+    Close,
     Char(char)
 }
 
@@ -24,41 +26,51 @@ pub fn transform(regex: String) -> Result<VecDeque<RegexSymbol>, String> {
     let regex = check_start_and_end_chars(regex)?;
     let regex = check_for_illegal_operator_sequences(regex)?;
 
-    let formatted = format(regex);
+    let formatted = format(regex)?;
 
     return convert(formatted);
 }
 
-fn format(regex: String) -> Vec<RegexSymbol> {
+fn format(regex: String) -> Result<Vec<RegexSymbol>, String> {
     let mut formatted: Vec<RegexSymbol> = Vec::new();
     let mut iter = regex.chars().peekable();
+    let mut escape_flag = false;
 
     // Loop through and add concat symbols inbetween valid slots
     while let Some(c) = iter.next() {
         let current: char = c;
+
+        if current == '\\' && !escape_flag {
+            escape_flag = true;
+            continue;
+        }
+
+        if escape_flag {
+            let escaped_symbol = RegexSymbol::get_escaped(current)?;
+            formatted.push(escaped_symbol);
+        }
+        else {
+            formatted.push(RegexSymbol::from_char(current));
+        }
+
         let next = match iter.peek() {
             Some(c) => *c,
             None => {
-                formatted.push(RegexSymbol::from_char(current)); // Add the final character to the formatted string
                 continue;
             }
         };
 
-        formatted.push(RegexSymbol::from_char(current));
+        let can_concat_occur_after_current = escape_flag || (current != '(' && !RegexSymbol::is_binary_operator(current));
+        let can_concat_occur_before_next = next != ')' && ! RegexSymbol::is_operator(next);
 
-        // Concatenation can't occur after an opening bracket e.g. '(' 
-        // Concatenation can't occur after a binary operator e.g. '|'
-        // Concatenation can't occur before a closing bracket e.g. ')'
-        // Concatenation can't occur before an operator e.g. '+'          
-        if current != '(' 
-                && !RegexSymbol::is_binary_operator(current) 
-                && next != ')' 
-                && !RegexSymbol::is_operator(next) {
+        if can_concat_occur_after_current && can_concat_occur_before_next {
             formatted.push(RegexSymbol::Concat);
         }
+        
+        escape_flag = false;
     }
 
-    return formatted;
+    return Ok(formatted);
 }
 
 /*
@@ -91,17 +103,17 @@ fn convert(formatted: Vec<RegexSymbol>) -> Result<VecDeque<RegexSymbol>, String>
     let mut operator_stack: Vec<RegexSymbol> = Vec::new();
 
     for symbol in formatted {
-        if let RegexSymbol::Char('(') = symbol {
+        if symbol == RegexSymbol::Open {
             operator_stack.push(symbol)
         }
-        else if let RegexSymbol::Char(')') = symbol {
+        else if symbol == RegexSymbol::Close {
             // If the stack runs out without finding a left parenthesis, then there are mismatched parentheses.
             let mut found_corresponding_bracket = false;
 
             while !found_corresponding_bracket {
                 match operator_stack.last() {
                     Some(top) => {
-                        if *top != RegexSymbol::Char('(') {
+                        if *top != RegexSymbol::Open {
                             output_queue.push_back(operator_stack.pop().unwrap());
                         }
                         else {
@@ -119,7 +131,7 @@ fn convert(formatted: Vec<RegexSymbol>) -> Result<VecDeque<RegexSymbol>, String>
                 // All binary operators are left associative in RegEx, so <= is used to respect the grouping.
                 // i.e. we want it to be evaluated from left to right
                 while !operator_stack.is_empty() 
-                        && *operator_stack.last().unwrap() != RegexSymbol::Char('(') 
+                        && *operator_stack.last().unwrap() != RegexSymbol::Open
                         && RegexSymbol::get_precedence(&symbol) <= RegexSymbol::get_precedence(operator_stack.last().unwrap()) {
                     output_queue.push_back(operator_stack.pop().unwrap());
                 }
@@ -136,7 +148,7 @@ fn convert(formatted: Vec<RegexSymbol>) -> Result<VecDeque<RegexSymbol>, String>
     // After the main loop, pop the remaining items from the operator stack into the output queue.
     while !operator_stack.is_empty() {
         // If the operator token on the top of the stack is a parenthesis, then there are mismatched parentheses.
-        if *operator_stack.last().unwrap() == RegexSymbol::Char('(') {
+        if *operator_stack.last().unwrap() == RegexSymbol::Open {
             return Err("Error - Unbalanced brackets".to_string());
         }
 
@@ -153,6 +165,10 @@ fn check_start_and_end_chars(regex: String) -> Result<String, String> {
 
     if regex.ends_with(|c| RegexSymbol::is_binary_operator(c)) {
         return Err("Error - Illegal operator usage at end of string".to_string());
+    }
+
+    if regex.ends_with(|c| c == '\\') {
+        return Err("Error - Pattern may not end with a trailing backslash".to_string());
     }
 
     return Ok(regex);
@@ -188,7 +204,27 @@ impl RegexSymbol {
             '+' => RegexSymbol::Plus,
             '*' => RegexSymbol::Star,
             '|' => RegexSymbol::Alternation,
+            '(' => RegexSymbol::Open,
+            ')' => RegexSymbol::Close,
             c => RegexSymbol::Char(c)
+        }
+    }
+
+    fn get_escaped(c: char) -> Result<RegexSymbol, String> {
+        return match c {
+            '?' => Ok(RegexSymbol::Char('?')),
+            '+' => Ok(RegexSymbol::Char('+')),
+            '*' => Ok(RegexSymbol::Char('*')),
+            '|' => Ok(RegexSymbol::Char('|')),
+            '(' => Ok(RegexSymbol::Char('(')),
+            ')' => Ok(RegexSymbol::Char(')')),
+            't' => Ok(RegexSymbol::Char('\t')),
+            'b' => Ok(RegexSymbol::Char('\u{0008}')),
+            'n' => Ok(RegexSymbol::Char('\n')),
+            'r' => Ok(RegexSymbol::Char('\r')),
+            'f' => Ok(RegexSymbol::Char('\u{000A}')),
+            '\\' => Ok(RegexSymbol::Char('\\')),
+            c => Err(format!("Error - Invalid escaped character: \\{}", c))
         }
     }
 
@@ -199,7 +235,7 @@ impl RegexSymbol {
             RegexSymbol::Star => 3,
             RegexSymbol::Concat => 2,
             RegexSymbol::Alternation => 1,
-            RegexSymbol::Char(_) => 0
+            _ => 0
         }
     }
 
@@ -210,8 +246,9 @@ impl RegexSymbol {
             RegexSymbol::Star => OperatorType::Unary,
             RegexSymbol::Concat => OperatorType::Binary,
             RegexSymbol::Alternation => OperatorType::Binary,
+            RegexSymbol::Open => OperatorType::None,
+            RegexSymbol::Close => OperatorType::None,
             RegexSymbol::Char(_) => OperatorType::None
-
         }
     }
 
@@ -236,6 +273,8 @@ impl fmt::Display for RegexSymbol {
             RegexSymbol::Star => write!(f, "*"),
             RegexSymbol::Concat => write!(f, "."),
             RegexSymbol::Alternation => write!(f, "|"),
+            RegexSymbol::Open => write!(f, "("),
+            RegexSymbol::Close => write!(f, ")"),
             RegexSymbol::Char(c) => write!(f, "{}", c),
         }
     }
@@ -251,6 +290,25 @@ mod test {
 
         for i in 0..examples.len() {
             let result: String = format(examples[i].to_string())
+                .unwrap()
+                .iter()
+                .map(|x| x.to_string())
+                .collect();
+            
+            let answer = answers[i];
+
+            assert_eq!(result, answer);
+        }
+    }
+
+    #[test]
+    fn given_valid_basic_examples_with_escaped_characters_when_formatting_it_should_correctly_do_so() {
+        let examples = [r"\*a\ro\+", r"(\r)(\n)", r"(\r\n)", r"\\"];
+        let answers = ["*.a.\r.o.+", "(\r).(\n)", "(\r.\n)", "\\"];
+
+        for i in 0..examples.len() {
+            let result: String = format(examples[i].to_string())
+                .unwrap()
                 .iter()
                 .map(|x| x.to_string())
                 .collect();
@@ -268,6 +326,7 @@ mod test {
 
         for i in 0..examples.len() {
             let result: String = format(examples[i].to_string())
+                .unwrap()
                 .iter()
                 .map(|x| x.to_string())
                 .collect();
@@ -285,6 +344,7 @@ mod test {
 
         for i in 0..examples.len() {
             let result: String = format(examples[i].to_string())
+                .unwrap()
                 .iter()
                 .map(|x| x.to_string())
                 .collect();
@@ -296,12 +356,42 @@ mod test {
     }
 
     #[test]
+    fn given_random_examples_with_invalid_escape_characters_when_formatting_it_should_not_accept() {
+        let examples = [r"\a", r"\c", r"\x"];
+
+        for i in 0..examples.len() {
+            let result = format(examples[i].to_string());
+
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
     fn given_valid_complicated_examples_when_formatting_it_should_correctly_do_so() {
         let examples = ["a?a?a?aaa", "a(bb)+a", "ab|bc"];
         let answers = ["a?.a?.a?.a.a.a", "a.(b.b)+.a", "a.b|b.c"];
 
         for i in 0..examples.len() {
             let result: String = format(examples[i].to_string())
+                .unwrap()
+                .iter()
+                .map(|x| x.to_string())
+                .collect();
+            
+            let answer = answers[i];
+
+            assert_eq!(result, answer);
+        }
+    }
+
+    #[test]
+    fn given_valid_complicated_examples_with_escaped_characters_when_formatting_it_should_correctly_do_so() {
+        let examples = [r"a\na", r"a\(a", r"a\)a", r"a\|a", r"a\(a\)a", r"\n\n", r"\\\n"];
+        let answers = ["a.\n.a", "a.(.a", "a.).a", "a.|.a", "a.(.a.).a", "\n.\n", "\\.\n"];
+
+        for i in 0..examples.len() {
+            let result: String = format(examples[i].to_string())
+                .unwrap()
                 .iter()
                 .map(|x| x.to_string())
                 .collect();
@@ -316,6 +406,24 @@ mod test {
     fn given_valid_complicated_examples_when_transforming_it_should_correctly_output_postfix() {
         let examples = ["a", "a(bb)+a", "abcdefg", "(a|b)*a", "a(b|c)*d", "a*(b+|(a|b))?(c|d)"];
         let answers = ["a", "abb.+.a.", "ab.c.d.e.f.g.", "ab|*a.", "abc|*.d.", "a*b+ab||?.cd|."];
+
+        for i in 0..examples.len() {
+            let result: String = transform(examples[i].to_string())
+                .unwrap()
+                .iter()
+                .map(|x| x.to_string())
+                .collect();
+            
+            let answer = answers[i];
+
+            assert_eq!(result, answer);
+        }
+    }
+
+    #[test]
+    fn given_valid_complicated_examples_with_escaped_characters_when_transforming_it_should_correctly_output_postfix() {
+        let examples = [r"\n", r"\((b\n)+a", r"ab\*\)efg", r"(\\|\?)*a", r"\t(a|\t)*\t", r"a*(b+|(\)|\())?(\n|d)"];
+        let answers = ["\n", "(b\n.+.a.", "ab.*.).e.f.g.", "\\?|*a.", "\ta\t|*.\t.", "a*b+)(||?.\nd|."];
 
         for i in 0..examples.len() {
             let result: String = transform(examples[i].to_string())
