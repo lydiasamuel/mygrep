@@ -246,9 +246,7 @@ impl RegexSymbol {
             RegexSymbol::Star => OperatorType::Unary,
             RegexSymbol::Concat => OperatorType::Binary,
             RegexSymbol::Alternation => OperatorType::Binary,
-            RegexSymbol::Open => OperatorType::None,
-            RegexSymbol::Close => OperatorType::None,
-            RegexSymbol::Char(_) => OperatorType::None
+            _ => OperatorType::None
         }
     }
 
