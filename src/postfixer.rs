@@ -41,6 +41,10 @@ fn format(regex: String) -> Result<Vec<RegexSymbol>, String> {
         let current: char = c;
 
         if current == '\\' && !escape_flag {
+            if iter.peek() == None { // Need to check the trailing / here since doing it above would error on // when it shouldn't
+                return Err("Error - Pattern may not end with a trailing backslash".to_string());
+            }
+
             escape_flag = true;
             continue;
         }
@@ -165,10 +169,6 @@ fn check_start_and_end_chars(regex: String) -> Result<String, String> {
 
     if regex.ends_with(|c| RegexSymbol::is_binary_operator(c)) {
         return Err("Error - Illegal operator usage at end of string".to_string());
-    }
-
-    if regex.ends_with(|c| c == '\\') {
-        return Err("Error - Pattern may not end with a trailing backslash".to_string());
     }
 
     return Ok(regex);
@@ -336,7 +336,7 @@ mod test {
     }
 
     #[test]
-    fn given_valid_examples_when_formatting_it_should_not_concatenate_operators_together() {
+    fn given_xamples_when_formatting_it_should_not_concatenate_operators_together() {
         let examples = ["(a)", "a|a", "a*", "((a))"];
         let answers = ["(a)", "a|a", "a*", "((a))"];
 
@@ -354,11 +354,11 @@ mod test {
     }
 
     #[test]
-    fn given_random_examples_with_invalid_escape_characters_when_formatting_it_should_not_accept() {
-        let examples = [r"\a", r"\c", r"\x"];
+    fn given_random_examples_with_invalid_escape_sequences_when_formatting_it_should_not_accept() {
+        let examples = [r"\p", r"\q", r"\c", r"\\\", r"ab\"];
 
-        for i in 0..examples.len() {
-            let result = format(examples[i].to_string());
+        for example in examples {
+            let result = format(example.to_string());
 
             assert!(result.is_err());
         }
@@ -384,8 +384,8 @@ mod test {
 
     #[test]
     fn given_valid_complicated_examples_with_escaped_characters_when_formatting_it_should_correctly_do_so() {
-        let examples = [r"a\na", r"a\(a", r"a\)a", r"a\|a", r"a\(a\)a", r"\n\n", r"\\\n"];
-        let answers = ["a.\n.a", "a.(.a", "a.).a", "a.|.a", "a.(.a.).a", "\n.\n", "\\.\n"];
+        let examples = [r"a\na", r"a\(a", r"a\)a", r"a\|a", r"a\(a\)a", r"\n\n", r"\\\n", r"\\\\"];
+        let answers = ["a.\n.a", "a.(.a", "a.).a", "a.|.a", "a.(.a.).a", "\n.\n", "\\.\n", "\\.\\"];
 
         for i in 0..examples.len() {
             let result: String = format(examples[i].to_string())
