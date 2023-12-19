@@ -40,7 +40,7 @@ fn compile_character(nfa: &mut Graph<AutomataState, AutomataLabel>, c: char) -> 
     let start = nfa.add_node(AutomataState::new(false));
     let accept = nfa.add_node(AutomataState::new(false));
 
-    let label = AutomataLabel::new(Some(c), false);
+    let label = AutomataLabel::new(Some(c));
 
     nfa.add_edge(start, accept, label);
 
@@ -53,9 +53,9 @@ fn compile_optional(nfa: &mut Graph<AutomataState, AutomataLabel>, component_sta
     let start = nfa.add_node(AutomataState::new(false));
     let accept = nfa.add_node(AutomataState::new(false));
 
-    nfa.add_edge(start, top.get_start_state(), AutomataLabel::new(None, true));
-    nfa.add_edge(top.get_accept_state(), accept, AutomataLabel::new(None, true));
-    nfa.add_edge(start, accept, AutomataLabel::new(None, true));
+    nfa.add_edge(start, top.get_start_state(), AutomataLabel::new(None));
+    nfa.add_edge(top.get_accept_state(), accept, AutomataLabel::new(None));
+    nfa.add_edge(start, accept, AutomataLabel::new(None));
 
     return AutomataComponent::new(start, accept);
 }
@@ -66,9 +66,9 @@ fn compile_plus(nfa: &mut Graph<AutomataState, AutomataLabel>, component_stack: 
     let start = nfa.add_node(AutomataState::new(false));
     let accept = nfa.add_node(AutomataState::new(false));
 
-    nfa.add_edge(start, top.get_start_state(), AutomataLabel::new(None, true));
-    nfa.add_edge(top.get_accept_state(), accept, AutomataLabel::new(None, true));
-    nfa.add_edge(top.get_accept_state(), top.get_start_state(), AutomataLabel::new(None, true));
+    nfa.add_edge(start, top.get_start_state(), AutomataLabel::new(None));
+    nfa.add_edge(top.get_accept_state(), accept, AutomataLabel::new(None));
+    nfa.add_edge(top.get_accept_state(), top.get_start_state(), AutomataLabel::new(None));
 
     return AutomataComponent::new(start, accept);
 }
@@ -79,10 +79,10 @@ fn compile_star(nfa: &mut Graph<AutomataState, AutomataLabel>, component_stack: 
     let start = nfa.add_node(AutomataState::new(false));
     let accept = nfa.add_node(AutomataState::new(false));
 
-    nfa.add_edge(start, top.get_start_state(), AutomataLabel::new(None, true));
-    nfa.add_edge(top.get_accept_state(), accept, AutomataLabel::new(None, true));
-    nfa.add_edge(top.get_accept_state(), top.get_start_state(), AutomataLabel::new(None, true));
-    nfa.add_edge(start, accept, AutomataLabel::new(None, true));
+    nfa.add_edge(start, top.get_start_state(), AutomataLabel::new(None));
+    nfa.add_edge(top.get_accept_state(), accept, AutomataLabel::new(None));
+    nfa.add_edge(top.get_accept_state(), top.get_start_state(), AutomataLabel::new(None));
+    nfa.add_edge(start, accept, AutomataLabel::new(None));
 
     return AutomataComponent::new(start, accept);
 }
@@ -91,7 +91,7 @@ fn compile_concat(nfa: &mut Graph<AutomataState, AutomataLabel>, component_stack
     let right = component_stack.pop().unwrap();
     let left = component_stack.pop().unwrap();
 
-    nfa.add_edge(left.get_accept_state(), right.get_start_state(), AutomataLabel::new(None, true));
+    nfa.add_edge(left.get_accept_state(), right.get_start_state(), AutomataLabel::new(None));
 
     return AutomataComponent::new(left.get_start_state(), right.get_accept_state());
 }
@@ -103,10 +103,10 @@ fn compile_alternation(nfa: &mut Graph<AutomataState, AutomataLabel>, component_
     let start = nfa.add_node(AutomataState::new(false));
     let accept = nfa.add_node(AutomataState::new(false));
 
-    nfa.add_edge(start, left.get_start_state(), AutomataLabel::new(None, true));
-    nfa.add_edge(start, right.get_start_state(), AutomataLabel::new(None, true));
-    nfa.add_edge(left.get_accept_state(), accept, AutomataLabel::new(None, true));
-    nfa.add_edge(right.get_accept_state(), accept, AutomataLabel::new(None, true));
+    nfa.add_edge(start, left.get_start_state(), AutomataLabel::new(None));
+    nfa.add_edge(start, right.get_start_state(), AutomataLabel::new(None));
+    nfa.add_edge(left.get_accept_state(), accept, AutomataLabel::new(None));
+    nfa.add_edge(right.get_accept_state(), accept, AutomataLabel::new(None));
 
     return AutomataComponent::new(start, accept);
 }

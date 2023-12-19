@@ -5,8 +5,7 @@ pub struct AutomataState {
 }
 
 pub struct AutomataLabel {
-    label: Option<char>,
-    empty: bool
+    label: Option<char>
 }
 
 pub struct AutomataComponent {
@@ -31,31 +30,18 @@ impl AutomataState {
 }
 
 impl AutomataLabel {
-    pub fn new(label: Option<char>, empty: bool) -> AutomataLabel {
-        if empty && label != None {
-            panic!("Can't fill in an empty automata label");
-        }
-
-        if !empty && label == None {
-            panic!("Must fill in a non-empty automata label");
-        }
-
+    pub fn new(label: Option<char>) -> AutomataLabel {
         return AutomataLabel {
-            label,
-            empty
+            label
         }
     }
 
     pub fn is_empty(&self) -> bool {
-        return self.empty;
+        return self.label == None;
     }
 
-    pub fn get_label(&self) -> Result<char, &str> {
-        if self.empty {
-            return Err("Error - No label present on an empty automata label");
-        }
-
-        return Ok(self.label.unwrap())
+    pub fn get_label(&self) -> Option<char> {
+        return self.label;
     }
 }
 
