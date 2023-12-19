@@ -40,9 +40,7 @@ fn compile_character(nfa: &mut Graph<AutomataState, AutomataLabel>, c: char) -> 
     let start = nfa.add_node(AutomataState::new(false));
     let accept = nfa.add_node(AutomataState::new(false));
 
-    let label = AutomataLabel::new(Some(c));
-
-    nfa.add_edge(start, accept, label);
+    nfa.add_edge(start, accept, AutomataLabel::new(Some(c));
 
     return AutomataComponent::new(start, accept);
 }
