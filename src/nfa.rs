@@ -19,7 +19,10 @@ pub fn build_nfa(postfix_regex: VecDeque<RegexSymbol>) -> (AutomataComponent, Gr
     let result = component_stack.pop().unwrap();
 
     // Mark final state as accepting
-    nfa.get_node_data(result.get_accept_state()).borrow_mut().mark_as_accepting();
+    nfa.get_node_data(result.get_accept_state())
+        .unwrap()
+        .borrow_mut()
+        .mark_as_accepting();
 
     return (result, nfa);
 }
