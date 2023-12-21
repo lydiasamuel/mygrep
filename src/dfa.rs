@@ -10,15 +10,3 @@
     //          add t to Q and worklist
     //
     // Delta computes the new states possible from each element in q
-
-fn get_alphabet(regex: VecDeque<RegexSymbol>) -> HashSet<char> {
-    let mut alphabet: HashSet<char> = HashSet::new();
-
-    for symbol in regex {
-        if let RegexSymbol::Char(c) = symbol {
-            alphabet.insert(c);
-        }
-    }
-
-    return alphabet;
-}

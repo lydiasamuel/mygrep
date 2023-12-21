@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, collections::{VecDeque, HashSet}};
 
 pub type OperatorPrecedence = usize;
 
@@ -19,6 +19,19 @@ pub enum RegexSymbol {
     Open,
     Close,
     Char(char)
+}
+
+
+pub fn get_alphabet(regex: VecDeque<RegexSymbol>) -> HashSet<char> {
+    let mut alphabet: HashSet<char> = HashSet::new();
+
+    for symbol in regex {
+        if let RegexSymbol::Char(c) = symbol {
+            alphabet.insert(c);
+        }
+    }
+
+    return alphabet;
 }
 
 impl RegexSymbol {
