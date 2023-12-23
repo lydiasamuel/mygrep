@@ -1,6 +1,4 @@
-/* https://en.wikipedia.org/wiki/Powerset_construction
- *
- * Intuition from Wikipedia:
+/* Intuition from Wikipedia (https://en.wikipedia.org/wiki/Powerset_construction):
  * To simulate the operation of a DFA on a given input string, one needs to keep track of a single 
  * state at any time: the state that the automaton will reach after seeing a prefix of the input. 
  * In contrast, to simulate an NFA, one needs to keep track of a set of states: all of the states 
@@ -11,32 +9,16 @@
  * single DFA states play in the DFA simulation, and in fact the sets of NFA states appearing in this 
  * simulation may be re-interpreted as being states of a DFA.
  * 
- * My Words:
- * Basically the algorithm starts at the beginning of the NFA and builds the DFA by simulating the
- * equivalent deterministic edges one at a time over all the alphabet until there's nothing left to
- * simulate. 
+ * My Explanation:
+ * We construct a deterministic automata from a non-deterministic automata by simulating the non-determinism
+ * as determinism. Since the computer doesn't have guessware we can't know which path to take, so to simulate 
+ * the non-determinism we have to just try all the possibilities available at each point. 
  * 
- * i.e. You can get to x, y and z by consuming these empty transitions and then taking an edge
- * labelled e.g. 'i' therefore deterministically they are the same.
+ * The procedure is as follows, we group all equivalently reachable states of the NFA after seeing a prefix
+ * of the input as a single node of the final DFA. Then we link that node up to the previous one by the 
+ * actual transition it took to get to it, discarding all the possible empty transitions we had to try.
  * 
- * The states in which the NFA could be in after taking an edge labelled e.g. 'i' (accounting for all 
- * the empty transitions it could have taken) are grouped as one and become a state in the final DFA.
- * Note that we account for all the empty transitions because we don't know which empty transition 
- * the NFA might take, so to determine things we've got to try all of them.
- * 
- * The algorithm takes these new super states of the DFA and repeats the process of simulating 
- * deterministic edges from each of the sub states over the alphabet. This gets the next lot
- * of super states from the current one, with the corresponding labelled edges to them.
- * 
- * Rinse and repeat until you've simulated everything, and if a final state of the NFA is in a super state,
- * that means that the super state could accept.
- * 
- * One sentence:
- * Group all equivalently reachable states of the NFA, after seeing a prefix of the input as a single 
- * node of the final DFA, and link that node up by the deterministic transition it took to get to it.
- */
-
-/* Psuedo code:
+ * Psuedocode:
  * q0 = eClosure({n0});
  * Q = q0
  * worklist = {q0}
