@@ -37,34 +37,65 @@
  */
 
 /* Psuedo code:
- * start_of_dfa = empty_closure({start_of_nfa})
- * final_dfa_states = {start_of_dfa}
- * final_dfa_edges = {}
- * worklist = {start_of_dfa}
+ * q0 = eClosure({n0});
+ * Q = q0
+ * worklist = {q0}
  * while (worklist is not empty)
- *   remove current_state from worklist
- *   for each char c in alphabet
- *     next_state = empty_closure(delta(current_state, c))
- *     add to final_dfa_edges: (current_state -> next_state) on char c
- *     if any sub state is accepting in next_state
- *       mark next_state as accepting 
- *     if next_state is not in final_dfa_states then
- *       add next_state to final_dfa_states 
- *       add next_state to worklist
- * 
+ *  remove q from worklist
+ *  for each char in alphabet
+ *    t = eClosure(Delta(q, c))
+ *    T[q,c] = t
+ *    if t is not in Q then
+ *      add t to Q and worklist
+ *
  * Note: delta gets the neighbours of each sub state by taking an edge labelled with char c from it.
  */
 
-use std::collections::HashSet;
+use std::collections::{BTreeSet, VecDeque, HashMap};
 
 use crate::{graph::{NodeIndex, Graph}, automata::{AutomataState, AutomataLabel}};
 
-type DFAState = HashSet<NodeIndex>;
+// Use a BTreeSet because it implements Hash since it stores it's elements in sorted order.
+type DFAState = BTreeSet<NodeIndex>;
 
-pub fn build_dfa(start: NodeIndex, nfa: Graph<AutomataState, AutomataLabel>, alphabet: Vec<char>) -> (NodeIndex, Graph<AutomataState, AutomataLabel>) {
-    let start_of_dfa = empty_closure(&nfa, &vec![start]);
+pub fn build_dfa(start: NodeIndex, nfa: Graph<AutomataState, AutomataLabel>, alphabet: Vec<char>) -> (NodeIndex, Graph<AutomataState, char>) {
+    let mut dfa: Graph<AutomataState, char> = Graph::new();
+    
+    let start_of_dfa = empty_closure(&nfa, &BTreeSet::from([start]));
 
-    let final_dfa_states: HashSet<DFAState> = HashSet::from([start_of_dfa]);
+    let is_start_accepting = contains_accepting_state(&start_of_dfa, &nfa);
+    let start_index = dfa.add_node(AutomataState::new(is_start_accepting));
+
+    let mut final_dfa_states: HashMap<DFAState, NodeIndex> = HashMap::from([(start_of_dfa, start_index)]);
+    
+    let mut worklist: VecDeque<(DFAState, NodeIndex)> = VecDeque::new();
+    worklist.push_back((start_of_dfa, start_index));
+
+    while !worklist.is_empty() {
+        let (current, index) = worklist.pop_front().unwrap();
+
+        for c in alphabet {
+            let available_neighbours = delta(&nfa,  &current, c);
+            let next = empty_closure(&nfa, &available_neighbours);
+
+            let next_index: usize;
+
+            if !final_dfa_states.contains_key(&next) {
+                let is_next_accepting = contains_accepting_state(&start_of_dfa, &nfa);
+                next_index = dfa.add_node(AutomataState::new(is_next_accepting));
+
+                final_dfa_states.insert(next, next_index);
+                worklist.push_back((next, next_index));
+            }
+            else {
+                next_index = *final_dfa_states.get(&next).unwrap();
+            }
+
+            dfa.add_edge(index, next_index, c);
+        }
+    }
+
+    return (start_index, dfa)
 }
 
 fn empty_closure(nfa: &Graph<AutomataState, AutomataLabel>, states: &DFAState) -> DFAState {
@@ -72,5 +103,33 @@ fn empty_closure(nfa: &Graph<AutomataState, AutomataLabel>, states: &DFAState) -
 }
 
 fn delta(nfa: &Graph<AutomataState, AutomataLabel>, states: &DFAState, c: char) -> DFAState {
+    let mut result: BTreeSet<NodeIndex> = BTreeSet::new();
 
+    for sub_state in states {
+        let outgoing_edges = nfa.outgoing_edges(*sub_state).unwrap();
+
+        for edge in outgoing_edges {
+            let data = nfa.get_edge_data(edge).unwrap().borrow();
+            
+            if let Some(s) = data.get_label() {
+                if s == c {
+                    result.insert(nfa.traverse(edge).unwrap());
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+fn contains_accepting_state(states: &DFAState, nfa: &Graph<AutomataState, AutomataLabel>) -> bool {
+    for sub_state in states {
+        let data = nfa.get_node_data(*sub_state).unwrap();
+
+        if data.borrow().is_accepting() {
+            return true;
+        }
+    }
+
+    return false;
 }
