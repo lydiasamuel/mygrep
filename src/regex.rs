@@ -21,13 +21,12 @@ pub enum RegexSymbol {
     Char(char)
 }
 
-
-pub fn get_alphabet(regex: VecDeque<RegexSymbol>) -> HashSet<char> {
-    let mut alphabet: HashSet<char> = HashSet::new();
+pub fn get_alphabet(regex: VecDeque<RegexSymbol>) -> Vec<char> {
+    let mut alphabet: Vec<char> = Vec::new();
 
     for symbol in regex {
         if let RegexSymbol::Char(c) = symbol {
-            alphabet.insert(c);
+            alphabet.push(c);
         }
     }
 
