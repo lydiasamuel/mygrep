@@ -102,14 +102,14 @@ impl<T, U> Graph<T, U> {
         return Ok(index);
     }
 
-    pub fn get_node_data(&self, index: NodeIndex) -> Result<Rc<RefCell<T>>, String> {
-        let index = self.check_node_index(index)?;
+    pub fn get_node_data(&self, index: &NodeIndex) -> Result<Rc<RefCell<T>>, String> {
+        let index = self.check_node_index(*index)?;
 
         return Ok(self.nodes[index].data.clone());
     }
 
-    pub fn get_edge_data(&self, index: EdgeIndex) -> Result<Rc<RefCell<U>>, String> {
-        let index = self.check_edge_index(index)?;
+    pub fn get_edge_data(&self, index: &EdgeIndex) -> Result<Rc<RefCell<U>>, String> {
+        let index = self.check_edge_index(*index)?;
 
         return Ok(self.edges[index].data.clone());
     }
@@ -170,13 +170,13 @@ mod test {
         let n0_outgoing_edges = graph.outgoing_edges(n0).unwrap();
 
         assert!(n0_outgoing_edges.len() == 2);
-        assert!(*graph.get_edge_data(n0_outgoing_edges[0]).unwrap().borrow() == "n0->n3");
-        assert!(*graph.get_edge_data(n0_outgoing_edges[1]).unwrap().borrow() == "n0->n1");
+        assert!(*graph.get_edge_data(&n0_outgoing_edges[0]).unwrap().borrow() == "n0->n3");
+        assert!(*graph.get_edge_data(&n0_outgoing_edges[1]).unwrap().borrow() == "n0->n1");
 
         let n1_outgoing_edges = graph.outgoing_edges(n1).unwrap();
 
         assert!(n1_outgoing_edges.len() == 1);
-        assert!(*graph.get_edge_data(n1_outgoing_edges[0]).unwrap().borrow() == "n1->n2");
+        assert!(*graph.get_edge_data(&n1_outgoing_edges[0]).unwrap().borrow() == "n1->n2");
 
         let n2_outgoing_edges = graph.outgoing_edges(n2).unwrap();
 
@@ -185,7 +185,7 @@ mod test {
         let n3_outgoing_edges = graph.outgoing_edges(n3).unwrap();
 
         assert!(n3_outgoing_edges.len() == 1);
-        assert!(*graph.get_edge_data(n3_outgoing_edges[0]).unwrap().borrow() == "n3->n2");
+        assert!(*graph.get_edge_data(&n3_outgoing_edges[0]).unwrap().borrow() == "n3->n2");
 
     }
 
@@ -213,18 +213,18 @@ mod test {
         assert!(n0_outgoing_edges.len() == 1);
 
         let first_jump = graph.traverse(n0_outgoing_edges[0]).unwrap();
-        assert!(*graph.get_node_data(first_jump).unwrap().borrow() == "n1");
+        assert!(*graph.get_node_data(&first_jump).unwrap().borrow() == "n1");
 
         let n1_outgoing_edges = graph.outgoing_edges(first_jump).unwrap();
         assert!(n1_outgoing_edges.len() == 1);
 
         let second_jump = graph.traverse(n1_outgoing_edges[0]).unwrap();
-        assert!(*graph.get_node_data(second_jump).unwrap().borrow() == "n2");
+        assert!(*graph.get_node_data(&second_jump).unwrap().borrow() == "n2");
 
         let n2_outgoing_edges = graph.outgoing_edges(second_jump).unwrap();
         assert!(n2_outgoing_edges.len() == 1);
 
         let third_jump = graph.traverse(n2_outgoing_edges[0]).unwrap();
-        assert!(*graph.get_node_data(third_jump).unwrap().borrow() == "n0");
+        assert!(*graph.get_node_data(&third_jump).unwrap().borrow() == "n0");
     }
 }

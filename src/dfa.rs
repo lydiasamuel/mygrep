@@ -26,76 +26,95 @@
  *  remove q from worklist
  *  for each char in alphabet
  *    t = eClosure(Delta(q, c))
- *    T[q,c] = t
- *    if t is not in Q then
- *      add t to Q and worklist
+ *    if t is not empty
+ *      T[q,c] = t
+ *      if t is not in Q then
+ *        add t to Q and worklist
  *
  * Note: delta gets the neighbours of each sub state by taking an edge labelled with char c from it.
  */
 
-use std::collections::{BTreeSet, VecDeque, HashMap};
+use std::{collections::{BTreeSet, VecDeque, HashMap, HashSet}, rc::Rc};
 
-use crate::{graph::{NodeIndex, Graph}, automata::{AutomataState, AutomataLabel}};
+use crate::{graph::{NodeIndex, Graph}, automata::{AutomataState, AutomataLabel, AutomataComponent}};
 
 // Use a BTreeSet because it implements Hash since it stores it's elements in sorted order.
 type DFAState = BTreeSet<NodeIndex>;
 
-pub fn build_dfa(start: NodeIndex, nfa: Graph<AutomataState, AutomataLabel>, alphabet: Vec<char>) -> (NodeIndex, Graph<AutomataState, char>) {
+pub fn build_dfa(handle: AutomataComponent, nfa: Graph<AutomataState, AutomataLabel>, alphabet: Vec<char>) -> (NodeIndex, Graph<AutomataState, char>) {
     let mut dfa: Graph<AutomataState, char> = Graph::new();
     
-    let start_of_dfa = empty_closure(&nfa, &BTreeSet::from([start]));
+    let start = handle.get_start_state();
+    let accept = handle.get_accept_state();
 
-    let is_start_accepting = contains_accepting_state(&start_of_dfa, &nfa);
+    let start_of_dfa = Rc::new(empty_closure(&nfa, Rc::new(BTreeSet::from([start]))));
+    let is_start_accepting = start_of_dfa.contains(&accept);
     let start_index = dfa.add_node(AutomataState::new(is_start_accepting));
 
-    let mut final_dfa_states: HashMap<DFAState, NodeIndex> = HashMap::from([(start_of_dfa, start_index)]);
-    
-    let mut worklist: VecDeque<(DFAState, NodeIndex)> = VecDeque::new();
-    worklist.push_back((start_of_dfa, start_index));
+    let mut final_dfa_edges: HashSet<(NodeIndex, NodeIndex, char)> = HashSet::new();
+    let mut final_dfa_states: HashMap<Rc<DFAState>, NodeIndex> = HashMap::from([(start_of_dfa.clone(), start_index)]);
+
+    let mut worklist: VecDeque<(Rc<DFAState>, NodeIndex)> = VecDeque::new();
+    worklist.push_back((start_of_dfa.clone(), start_index));
 
     while !worklist.is_empty() {
         let (current, index) = worklist.pop_front().unwrap();
 
-        for c in alphabet {
-            let available_neighbours = delta(&nfa,  &current, c);
-            let next = empty_closure(&nfa, &available_neighbours);
+        for c in alphabet.iter() {
+            let available_neighbours = Rc::new(delta(&nfa,  current.clone(), *c));
+            let next = Rc::new(empty_closure(&nfa, available_neighbours.clone()));
 
-            let next_index: usize;
+            // Guard against adding empty states, i.e. the delta and empty closure returned nothing so there's no deterministic transition to be made on c
+            if !next.is_empty() {
+                let next_index: usize;
+                
+                if !final_dfa_states.contains_key(&next) {
+                    let is_next_accepting = next.contains(&accept);
+                    next_index = dfa.add_node(AutomataState::new(is_next_accepting));
 
-            if !final_dfa_states.contains_key(&next) {
-                let is_next_accepting = contains_accepting_state(&start_of_dfa, &nfa);
-                next_index = dfa.add_node(AutomataState::new(is_next_accepting));
+                    final_dfa_states.insert(next.clone(), next_index);
+                    worklist.push_back((next.clone(), next_index));
+                }
+                else {
+                    next_index = *final_dfa_states.get(&next).unwrap();
+                }
 
-                final_dfa_states.insert(next, next_index);
-                worklist.push_back((next, next_index));
+                // Guard against adding duplicate edges
+                if !final_dfa_edges.contains(&(index, next_index, *c)) {
+                    final_dfa_edges.insert((index, next_index, *c));
+                    dfa.add_edge(index, next_index, *c);
+                }
             }
-            else {
-                next_index = *final_dfa_states.get(&next).unwrap();
-            }
-
-            dfa.add_edge(index, next_index, c);
         }
     }
 
-    return (start_index, dfa)
+    return (start_index, dfa);
 }
 
-fn empty_closure(nfa: &Graph<AutomataState, AutomataLabel>, states: &DFAState) -> DFAState {
+// Using a depth-first search here to do the empty closure
+fn empty_closure(nfa: &Graph<AutomataState, AutomataLabel>, from: Rc<DFAState>) -> DFAState {
+    let mut result: DFAState = BTreeSet::new();
+    let mut visit_stack: Vec<NodeIndex> = Vec::new();
 
-}
+    for state in from.iter() {
+        visit_stack.push(*state);
+    }
 
-fn delta(nfa: &Graph<AutomataState, AutomataLabel>, states: &DFAState, c: char) -> DFAState {
-    let mut result: BTreeSet<NodeIndex> = BTreeSet::new();
+    while !visit_stack.is_empty() {
+        let current = visit_stack.pop().unwrap();
+        result.insert(current);
 
-    for sub_state in states {
-        let outgoing_edges = nfa.outgoing_edges(*sub_state).unwrap();
+        let outgoing_edges = nfa.outgoing_edges(current).unwrap();
 
         for edge in outgoing_edges {
-            let data = nfa.get_edge_data(edge).unwrap().borrow();
-            
-            if let Some(s) = data.get_label() {
-                if s == c {
-                    result.insert(nfa.traverse(edge).unwrap());
+            let data = nfa.get_edge_data(&edge).unwrap().clone();
+            let label = (*data).borrow().get_label();
+
+            if label == None {
+                let next = nfa.traverse(edge).unwrap();
+
+                if !result.contains(&next) && !visit_stack.contains(&next) {
+                    visit_stack.push(next)
                 }
             }
         }
@@ -104,14 +123,25 @@ fn delta(nfa: &Graph<AutomataState, AutomataLabel>, states: &DFAState, c: char) 
     return result;
 }
 
-fn contains_accepting_state(states: &DFAState, nfa: &Graph<AutomataState, AutomataLabel>) -> bool {
-    for sub_state in states {
-        let data = nfa.get_node_data(*sub_state).unwrap();
+fn delta(nfa: &Graph<AutomataState, AutomataLabel>, from: Rc<DFAState>, c: char) -> DFAState {
+    let mut result: BTreeSet<NodeIndex> = BTreeSet::new();
 
-        if data.borrow().is_accepting() {
-            return true;
+    for state in (*from).iter() {
+        let outgoing_edges = nfa.outgoing_edges(*state).unwrap();
+
+        for edge in outgoing_edges {
+            let data = nfa.get_edge_data(&edge).unwrap().clone();
+            let label = (*data).borrow().get_label();
+
+            match label {
+                Some(s) if s == c => {
+                    let target = nfa.traverse(edge).unwrap();
+                    result.insert(target);
+                },
+                _ => (),
+            }
         }
     }
 
-    return false;
+    return result;
 }

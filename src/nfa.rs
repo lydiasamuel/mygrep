@@ -7,7 +7,7 @@ use crate::regex::RegexSymbol;
 // Using Thompson construction of the NFA from postfix regex
 // The final NFA will have exactly one initial state and one final accepting state
 // Link: https://en.wikipedia.org/wiki/Thompson%27s_construction
-pub fn build_nfa(postfix_regex: VecDeque<RegexSymbol>) -> (NodeIndex, Graph<AutomataState, AutomataLabel>) {
+pub fn build_nfa(postfix_regex: VecDeque<RegexSymbol>) -> (AutomataComponent, Graph<AutomataState, AutomataLabel>) {
     let mut nfa: Graph<AutomataState, AutomataLabel> = Graph::new();
     let mut component_stack: Vec<AutomataComponent> = Vec::new();
 
@@ -19,12 +19,12 @@ pub fn build_nfa(postfix_regex: VecDeque<RegexSymbol>) -> (NodeIndex, Graph<Auto
     let result = component_stack.pop().unwrap();
 
     // Mark final state as accepting
-    nfa.get_node_data(result.get_accept_state())
+    nfa.get_node_data(&result.get_accept_state())
         .unwrap()
         .borrow_mut()
         .mark_as_accepting();
 
-    return (result.get_start_state(), nfa);
+    return (result, nfa);
 }
 
 fn compile(nfa: &mut Graph<AutomataState, AutomataLabel>, component_stack: &mut Vec<AutomataComponent>, symbol: RegexSymbol) -> AutomataComponent {
