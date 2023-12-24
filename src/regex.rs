@@ -1,4 +1,4 @@
-use std::{fmt, collections::{VecDeque, HashSet}};
+use std::{fmt, collections::VecDeque};
 
 pub type OperatorPrecedence = usize;
 

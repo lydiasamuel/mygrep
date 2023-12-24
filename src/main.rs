@@ -1,7 +1,7 @@
 use mygrep::{postfixer, nfa::build_nfa, dfa::build_dfa, regex::get_alphabet};
 
 fn main() {
-    let postfix_regex = postfixer::transform("(a|b)*a*".to_string()).unwrap();
+    let postfix_regex = postfixer::transform("(a|b)a*".to_string()).unwrap();
 
     let alphabet = get_alphabet(&postfix_regex);
 

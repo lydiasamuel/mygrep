@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::graph::{Graph, NodeIndex};
+use crate::graph::Graph;
 use crate::automata::{AutomataState, AutomataComponent, AutomataLabel};
 use crate::regex::RegexSymbol;
 
