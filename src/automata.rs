@@ -1,23 +1,21 @@
 use crate::graph::NodeIndex;
 
 pub struct AutomataState {
-    accepting: bool
+    accepting: bool,
 }
 
 pub struct AutomataLabel {
-    label: Option<char>
+    label: Option<char>,
 }
 
 pub struct AutomataComponent {
     start_state: NodeIndex,
-    accept_state: NodeIndex
+    accept_state: NodeIndex,
 }
 
 impl AutomataState {
     pub fn new(accepting: bool) -> AutomataState {
-        return AutomataState {
-            accepting
-        }
+        return AutomataState { accepting };
     }
 
     pub fn is_accepting(&self) -> bool {
@@ -31,9 +29,7 @@ impl AutomataState {
 
 impl AutomataLabel {
     pub fn new(label: Option<char>) -> AutomataLabel {
-        return AutomataLabel {
-            label
-        }
+        return AutomataLabel { label };
     }
 
     pub fn is_empty(&self) -> bool {
@@ -49,8 +45,8 @@ impl AutomataComponent {
     pub fn new(start_state: NodeIndex, accept_state: NodeIndex) -> AutomataComponent {
         return AutomataComponent {
             start_state,
-            accept_state
-        }
+            accept_state,
+        };
     }
 
     pub fn get_start_state(&self) -> NodeIndex {

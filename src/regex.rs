@@ -1,4 +1,4 @@
-use std::{fmt, collections::VecDeque};
+use std::{collections::VecDeque, fmt};
 
 pub type OperatorPrecedence = usize;
 
@@ -6,7 +6,7 @@ pub type OperatorPrecedence = usize;
 pub enum OperatorType {
     None,
     Unary,
-    Binary
+    Binary,
 }
 
 #[derive(PartialEq, Eq)]
@@ -18,7 +18,7 @@ pub enum RegexSymbol {
     Alternation,
     Open,
     Close,
-    Char(char)
+    Char(char),
 }
 
 pub fn get_alphabet(regex: &VecDeque<RegexSymbol>) -> Vec<char> {
@@ -42,8 +42,8 @@ impl RegexSymbol {
             '|' => RegexSymbol::Alternation,
             '(' => RegexSymbol::Open,
             ')' => RegexSymbol::Close,
-            c => RegexSymbol::Char(c)
-        }
+            c => RegexSymbol::Char(c),
+        };
     }
 
     pub fn get_escaped(c: char) -> Result<RegexSymbol, String> {
@@ -60,8 +60,8 @@ impl RegexSymbol {
             'r' => Ok(RegexSymbol::Char('\r')),
             'f' => Ok(RegexSymbol::Char('\u{000A}')),
             '\\' => Ok(RegexSymbol::Char('\\')),
-            c => Err(format!("Error - Invalid escaped character: \\{}", c))
-        }
+            c => Err(format!("Error - Invalid escaped character: \\{}", c)),
+        };
     }
 
     pub fn get_precedence(&self) -> OperatorPrecedence {
@@ -71,8 +71,8 @@ impl RegexSymbol {
             RegexSymbol::Star => 3,
             RegexSymbol::Concat => 2,
             RegexSymbol::Alternation => 1,
-            _ => 0
-        }
+            _ => 0,
+        };
     }
 
     pub fn get_type(&self) -> OperatorType {
@@ -82,8 +82,8 @@ impl RegexSymbol {
             RegexSymbol::Star => OperatorType::Unary,
             RegexSymbol::Concat => OperatorType::Binary,
             RegexSymbol::Alternation => OperatorType::Binary,
-            _ => OperatorType::None
-        }
+            _ => OperatorType::None,
+        };
     }
 
     pub fn is_operator(c: char) -> bool {
@@ -102,7 +102,7 @@ impl RegexSymbol {
 impl fmt::Display for RegexSymbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RegexSymbol::Optional =>  write!(f, "?"),
+            RegexSymbol::Optional => write!(f, "?"),
             RegexSymbol::Plus => write!(f, "+"),
             RegexSymbol::Star => write!(f, "*"),
             RegexSymbol::Concat => write!(f, "."),

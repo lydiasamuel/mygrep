@@ -1,22 +1,22 @@
-pub mod graph;
-pub mod postfixer;
-pub mod nfa;
 pub mod automata;
-pub mod regex;
 pub mod dfa;
+pub mod graph;
+pub mod nfa;
+pub mod postfixer;
+pub mod regex;
 
-use std::{fs, error::Error, env};
+use std::{env, error::Error, fs};
 
 use automata::AutomataState;
 use dfa::build_dfa;
-use graph::{NodeIndex, Graph};
+use graph::{Graph, NodeIndex};
 use nfa::build_nfa;
 use regex::get_alphabet;
 
 pub struct Config {
     pub query: String,
     pub file_path: String,
-    pub ignore_case: bool
+    pub ignore_case: bool,
 }
 
 impl Config {
@@ -38,7 +38,7 @@ impl Config {
     }
 }
 
-pub fn run(config: Config)  -> Result<(), Box<dyn Error>> {
+pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(config.file_path)?;
 
     let results = search(&config.query, &contents, config.ignore_case);
@@ -56,7 +56,7 @@ pub fn search<'a>(query: &str, contents: &'a str, ignore_case: bool) -> Vec<&'a 
     let postfix_regex = postfixer::transform(query.to_string()).unwrap();
 
     let alphabet = get_alphabet(&postfix_regex);
-    
+
     let (handle, nfa) = build_nfa(postfix_regex);
 
     let (start, dfa) = build_dfa(handle, nfa, alphabet);
@@ -67,16 +67,20 @@ pub fn search<'a>(query: &str, contents: &'a str, ignore_case: bool) -> Vec<&'a 
         }
     }
 
-    return results
+    return results;
 }
 
-
-fn check_line_matches(start_of_dfa: NodeIndex, dfa: &Graph<AutomataState, char>, line: &str, ignore_case: bool) -> bool {
+fn check_line_matches(
+    start_of_dfa: NodeIndex,
+    dfa: &Graph<AutomataState, char>,
+    line: &str,
+    ignore_case: bool,
+) -> bool {
     for i in 0..line.len() {
         let sub_line = &line[i..];
 
         let automata_has_accepted = run_automata(start_of_dfa, dfa, sub_line, ignore_case);
-        
+
         if automata_has_accepted {
             return true;
         }
@@ -85,7 +89,12 @@ fn check_line_matches(start_of_dfa: NodeIndex, dfa: &Graph<AutomataState, char>,
     return false;
 }
 
-fn run_automata(start_of_dfa: NodeIndex, dfa: &Graph<AutomataState, char>, sub_line: &str, ignore_case: bool) -> bool {
+fn run_automata(
+    start_of_dfa: NodeIndex,
+    dfa: &Graph<AutomataState, char>,
+    sub_line: &str,
+    ignore_case: bool,
+) -> bool {
     let mut current_node = start_of_dfa;
 
     for c in sub_line.chars() {
@@ -97,12 +106,11 @@ fn run_automata(start_of_dfa: NodeIndex, dfa: &Graph<AutomataState, char>, sub_l
             let label = *data.borrow();
 
             if ignore_case {
-                if label.to_lowercase().to_string() == c.to_lowercase().to_string()  {
+                if label.to_lowercase().to_string() == c.to_lowercase().to_string() {
                     current_node = dfa.traverse(edge).unwrap();
                     can_progress = true;
                 }
-            }
-            else {
+            } else {
                 if label == c {
                     current_node = dfa.traverse(edge).unwrap();
                     can_progress = true;
@@ -126,7 +134,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn given_basic_input_when_searching_in_case_sensitive_mode_should_return_answers_and_respect_case() {
+    fn given_basic_input_when_searching_in_case_sensitive_mode_should_return_answers_and_respect_case(
+    ) {
         let query = "duct";
         let contents = "\
 Rust:
@@ -141,7 +150,8 @@ Duct tape.";
     }
 
     #[test]
-    fn given_basic_input_when_searching_in_case_insensitive_mode_should_return_answers_and_not_respect_case() {
+    fn given_basic_input_when_searching_in_case_insensitive_mode_should_return_answers_and_not_respect_case(
+    ) {
         let query = "rUsT";
         let contents = "\
 Rust:
@@ -149,10 +159,7 @@ safe, fast, productive.
 Pick three.
 Trust me.";
 
-        assert_eq!(
-            vec!["Rust:", "Trust me."],
-            search(query, contents, true)
-        );
+        assert_eq!(vec!["Rust:", "Trust me."], search(query, contents, true));
     }
 
     #[test]
@@ -179,10 +186,7 @@ safe, fast, productive.
 Pick three.
 Trust me.";
 
-        assert_eq!(
-            vec!["Pick three."],
-            search(query, contents, false)
-        );
+        assert_eq!(vec!["Pick three."], search(query, contents, false));
     }
 
     #[test]

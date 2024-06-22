@@ -11,7 +11,7 @@ pub type NodeIndex = usize;
 
 pub struct Node<T> {
     first_outgoing_edge: Option<EdgeIndex>,
-    data: Rc<RefCell<T>>
+    data: Rc<RefCell<T>>,
 }
 
 pub type EdgeIndex = usize;
@@ -19,22 +19,21 @@ pub type EdgeIndex = usize;
 pub struct Edge<U> {
     target: NodeIndex,
     next_outgoing_edge: Option<EdgeIndex>,
-    data: Rc<RefCell<U>>
+    data: Rc<RefCell<U>>,
 }
 
 impl<T, U> Graph<T, U> {
     pub fn new() -> Graph<T, U> {
-        Graph { nodes: Vec::new(),
-                edges: Vec::new(), }
+        Graph {
+            nodes: Vec::new(),
+            edges: Vec::new(),
+        }
     }
 
     pub fn add_node(&mut self, data: T) -> NodeIndex {
         let index = self.nodes.len();
 
-        self.nodes.push(Node::new( 
-            None, 
-            data
-        ));
+        self.nodes.push(Node::new(None, data));
 
         return index;
     }
@@ -44,11 +43,8 @@ impl<T, U> Graph<T, U> {
 
         let node_data = &mut self.nodes[source];
 
-        self.edges.push(Edge::new(
-            target,
-            node_data.first_outgoing_edge,
-            data
-        ));
+        self.edges
+            .push(Edge::new(target, node_data.first_outgoing_edge, data));
 
         node_data.first_outgoing_edge = Some(edge_index);
     }
@@ -59,7 +55,7 @@ impl<T, U> Graph<T, U> {
         let mut edges: Vec<EdgeIndex> = Vec::new();
 
         let first_outgoing_edge = self.nodes[source].first_outgoing_edge;
-        
+
         match first_outgoing_edge {
             Some(edge) => {
                 edges.push(edge);
@@ -68,9 +64,9 @@ impl<T, U> Graph<T, U> {
                 while let Some(next) = self.edges[prev].next_outgoing_edge {
                     edges.push(next);
                     prev = next;
-                } 
-            },
-            None => ()
+                }
+            }
+            None => (),
         }
 
         return Ok(edges);
@@ -86,7 +82,11 @@ impl<T, U> Graph<T, U> {
         let end = self.nodes.len() - 1;
 
         if index > end {
-            return Err(format!("Error - Invalid source node index: {}, must be between 0-{}", index.to_string(), end.to_string()));
+            return Err(format!(
+                "Error - Invalid source node index: {}, must be between 0-{}",
+                index.to_string(),
+                end.to_string()
+            ));
         }
 
         return Ok(index);
@@ -96,7 +96,11 @@ impl<T, U> Graph<T, U> {
         let end = self.edges.len() - 1;
 
         if index > end {
-            return Err(format!("Error - Invalid edge index: {}, must be between 0-{}", index.to_string(), end.to_string()));
+            return Err(format!(
+                "Error - Invalid edge index: {}, must be between 0-{}",
+                index.to_string(),
+                end.to_string()
+            ));
         }
 
         return Ok(index);
@@ -128,7 +132,7 @@ impl<T> Node<T> {
         return Node {
             first_outgoing_edge,
             data: Rc::new(RefCell::new(data)),
-        }
+        };
     }
 }
 
@@ -138,7 +142,7 @@ impl<U> Edge<U> {
             target,
             next_outgoing_edge,
             data: Rc::new(RefCell::new(data)),
-        }
+        };
     }
 }
 
@@ -146,8 +150,8 @@ mod test {
     use super::*;
 
     #[test]
-    fn given_basic_graph_when_outgoing_edges_called_for_node_should_return_all_outgoing_edges_for_node() {
-
+    fn given_basic_graph_when_outgoing_edges_called_for_node_should_return_all_outgoing_edges_for_node(
+    ) {
         // N0 ---E0---> N1 ---E1---> 2
         // |                         ^
         // E2                        |
@@ -186,12 +190,11 @@ mod test {
 
         assert!(n3_outgoing_edges.len() == 1);
         assert!(*graph.get_edge_data(&n3_outgoing_edges[0]).unwrap().borrow() == "n3->n2");
-
     }
 
     #[test]
-    fn given_basic_graph_that_loops_when_traversing_through_from_start_should_loopback_to_the_start() {
-
+    fn given_basic_graph_that_loops_when_traversing_through_from_start_should_loopback_to_the_start(
+    ) {
         // N0 ---E0---> N1 ---E1---> N2
         // ^                         |
         // |                         |
